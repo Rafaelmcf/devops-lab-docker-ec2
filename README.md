@@ -264,4 +264,3 @@ Transição de carreira para Cloud Computing | AWS | Docker | Terraform | DevOps
 ---
 
 *Laboratório baseado no conteúdo de [Maria Lazara](https://www.youtube.com/@marialazaradev)*
-
