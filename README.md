@@ -1,6 +1,6 @@
-# 🐳 DevOps Lab: Docker + EC2 + Terraform
+# 🐳 DevOps Lab: Docker + EC2 + Terraform + CI/CD
 
-Laboratório DevOps prático baseado no conteúdo da [Maria Lazara](https://www.youtube.com/@marialazaradev), construído em fases progressivas para simular a evolução real de um ambiente de deploy — do manual ao automatizado com infraestrutura como código.
+Laboratório DevOps prático baseado no conteúdo da [Maria Lazara](https://www.youtube.com/@marialazaradev), construído em fases progressivas para simular a evolução real de um ambiente de deploy — do manual ao totalmente automatizado com infraestrutura como código e pipeline CI/CD.
 
 > **Nota:** Os recursos AWS foram destruídos após cada fase para evitar custos. Este repositório documenta a arquitetura, os comandos e o processo completo para fins de portfólio.
 
@@ -16,14 +16,16 @@ Um site estático containerizado com Docker e deployado na AWS. O foco não é o
 
 ```
 devops-lab-docker-ec2/
-├── fase-1-docker-ec2/          # Site estático + Dockerfile
-│   ├── website/                # HTML, CSS, JS do site
-│   └── Dockerfile              # Imagem baseada em nginx:alpine
-├── fase-2-terraform/           # Infraestrutura como Código
-│   ├── provider.tf             # Configuração do provider AWS
-│   ├── ec2.tf                  # Instância EC2 + IAM Profile
-│   ├── ecr.tf                  # Repositório ECR
-│   └── backend.tf              # Estado remoto no S3
+├── website/                        # HTML, CSS, JS do site
+├── Dockerfile                      # Imagem baseada em nginx:alpine
+├── .github/
+│   └── workflows/
+│       └── deploy.yml              # Pipeline CI/CD GitHub Actions
+├── fase-2-terraform/               # Infraestrutura como Código
+│   ├── provider.tf                 # Configuração do provider AWS
+│   ├── ec2.tf                      # Instância EC2 + Security Groups
+│   ├── ecr.tf                      # Repositório ECR
+│   └── backend.tf                  # Estado remoto no S3
 └── Screenshots/
     ├── ec2-running.png
     ├── ecr-imagem-v1.png
@@ -33,7 +35,10 @@ devops-lab-docker-ec2/
     ├── ec2-tags-terraform.png
     ├── ecr-terraform.png
     ├── site_aws_terraform.png
-    └── docker_ps_terraform.png
+    ├── docker_ps_terraform.png
+    ├── github-actions-success.png
+    ├── github-actions-steps.png
+    └── site-fase-3.png
 ```
 
 ---
@@ -41,34 +46,25 @@ devops-lab-docker-ec2/
 ## 🏗️ Arquitetura
 
 ```
-MacBook (local)
-     │
-     ├── docker buildx build --platform linux/amd64
-     │         │
-     │         ▼
-     │    Imagem Docker (nginx:alpine)
-     │         │
-     │    docker push
-     │         │
-     │         ▼
-     │    Amazon ECR (site_prod:v1.0)
-     │         │
-     │    ssh ec2-user → docker run
-     │         │
-     │         ▼
-     │    Amazon EC2 (Amazon Linux 2023)
-     │    porta 80 → container nginx
-     │         │
-     │         ▼
-     │    Usuário acessa via IP público
-     │
-     └── Terraform (Fase 2)
-               │
-          terraform apply
-               │
-               ▼
-          Provisiona automaticamente:
-          EC2 + ECR + Security Groups
+Developer (git push)
+        │
+        ▼
+GitHub Actions (CI/CD)
+        │
+        ├── docker build
+        ├── docker push ──────────► Amazon ECR (site_prod:latest)
+        │                                    │
+        └── SSH na EC2 ◄────────────────────┘
+                 │
+                 ▼
+          docker pull + run
+                 │
+                 ▼
+          Amazon EC2 (Amazon Linux 2023)
+          porta 80 → container nginx
+                 │
+                 ▼
+          Usuário acessa via IP público
 ```
 
 ---
@@ -110,7 +106,7 @@ docker buildx build --platform linux/amd64 \
 
 ```bash
 ssh -i ~/projetos/laboratorio-devops/projeto-devops-fase-2/chave-site-prod.pem \
-  ec2-user@13.218.216.179
+  ec2-user@<IP_EC2>
 ```
 
 **3. Autenticar no ECR dentro da EC2 e rodar o container**
@@ -213,6 +209,103 @@ terraform destroy   # destrói tudo (evitar custos)
 
 ---
 
+## ⚙️ Fase 3 — CI/CD com GitHub Actions
+
+### O problema resolvido
+
+Nas fases anteriores o deploy era feito manualmente: build local, push para o ECR e SSH na EC2. Na Fase 3 todo esse processo é automatizado — basta um `git push` para o site ser atualizado na AWS sem nenhuma intervenção manual.
+
+### Ferramentas utilizadas
+
+| Ferramenta | Função |
+|---|---|
+| **GitHub Actions** | Orquestrar o pipeline CI/CD |
+| **GitHub Secrets** | Armazenar credenciais com segurança |
+| **appleboy/ssh-action** | Executar comandos remotos na EC2 via SSH |
+| **aws-actions/amazon-ecr-login** | Autenticar no ECR dentro do pipeline |
+
+### Passo a passo do pipeline
+
+A cada `git push` na branch `main`, o GitHub Actions executa automaticamente:
+
+**1. Checkout** — baixa o código do repositório
+
+**2. Configure AWS credentials** — autentica na AWS usando Secrets
+
+**3. Login no ECR** — faz login no registry privado da AWS
+
+**4. Build e Push** — constrói a imagem Docker e envia para o ECR
+
+**5. Deploy na EC2** — acessa via SSH, faz pull da nova imagem e reinicia o container
+
+### Workflow (`.github/workflows/deploy.yml`)
+
+```yaml
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login no ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build e Push imagem
+        run: |
+          docker build -t 905663669292.dkr.ecr.us-east-1.amazonaws.com/site_prod:latest .
+          docker push 905663669292.dkr.ecr.us-east-1.amazonaws.com/site_prod:latest
+
+      - name: Deploy na EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 905663669292.dkr.ecr.us-east-1.amazonaws.com
+            docker pull 905663669292.dkr.ecr.us-east-1.amazonaws.com/site_prod:latest
+            docker stop website || true
+            docker rm website || true
+            docker run -d --name website -p 80:80 905663669292.dkr.ecr.us-east-1.amazonaws.com/site_prod:latest
+```
+
+### Secrets configurados no GitHub
+
+| Secret | Descrição |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | Credencial de acesso AWS |
+| `AWS_SECRET_ACCESS_KEY` | Credencial secreta AWS |
+| `EC2_HOST` | IP público da instância EC2 |
+| `EC2_SSH_KEY` | Chave privada SSH para acesso à EC2 |
+
+### Screenshots
+
+| Pipeline verde no GitHub Actions | Steps do workflow |
+|---|---|
+| ![Actions](Screenshots/github-actions-success.png) | ![Steps](Screenshots/github-actions-steps.png) |
+
+| Site no ar após deploy automatizado |
+|---|
+| ![Site](Screenshots/site-fase-3.png) |
+
+---
+
 ## 💡 Decisões Técnicas
 
 **Por que `--platform linux/amd64` no build?**
@@ -223,6 +316,9 @@ O ECR é o registry nativo da AWS, integrado ao IAM. A EC2 com Instance Profile 
 
 **Por que `--restart always` no docker run?**
 Garante que o container suba automaticamente caso a EC2 seja reiniciada, sem intervenção manual.
+
+**Por que GitHub Secrets e não variáveis no código?**
+Credenciais nunca devem ficar expostas no código. Os Secrets ficam criptografados no GitHub e são injetados no pipeline em tempo de execução, sem aparecer nos logs.
 
 **Por que destruir os recursos após o projeto?**
 Boa prática em Cloud: recursos ociosos geram custo. O Terraform permite recriar tudo em minutos com `terraform apply`, então não há necessidade de manter a infraestrutura ativa.
@@ -244,12 +340,9 @@ Infraestrutura como código é versionável, reproduzível e auditável. Com Ter
 - State file remoto com S3 backend
 - Security Groups (HTTP, HTTPS, SSH)
 - Ciclo completo: `terraform init → plan → apply → destroy`
-
----
-
-## 🔜 Próximos passos
-
-- **Fase 3:** CI/CD com GitHub Actions — automatizar build, push e deploy a cada `git push`
+- Pipeline CI/CD com GitHub Actions
+- GitHub Secrets para gestão segura de credenciais
+- Deploy automatizado via SSH
 
 ---
 
