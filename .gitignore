@@ -1,0 +1,35 @@
+# Chaves SSH e credenciais — NUNCA commitar
+*.pem
+*.key
+*.ppk
+credentials
+.aws/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+*.tfplan
+**/.terraform/*
+
+# Variáveis de ambiente
+.env
+*.env
+.env.*
+
+# Sistema operacional
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editores
+.vscode/
+*.code-workspace
+
+# Logs e temporários
+*.log
+*.tmp
+*.bak
+*.swp
