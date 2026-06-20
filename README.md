@@ -330,7 +330,7 @@ Infraestrutura como código é versionável, reproduzível e auditável. Com Ter
 **Rafael Figueiredo**
 Transição de carreira para Cloud Computing | AWS | Docker | Terraform | DevOps
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Rafael%20Figueiredo-blue?logo=linkedin)](https://linkedin.com/in/SEU-PERFIL)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Rafael%20Figueiredo-blue?logo=linkedin)](https://linkedin.com/in/rafaelmcfigueiredo)
 [![GitHub](https://img.shields.io/badge/GitHub-Rafaelmcf-black?logo=github)](https://github.com/Rafaelmcf)
 
 ---
