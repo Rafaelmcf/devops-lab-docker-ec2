@@ -4,15 +4,15 @@ Laboratório DevOps prático baseado no conteúdo da [Maria Lazara](https://www.
 
 > **Nota:** Os recursos AWS foram destruídos após cada fase para evitar custos. Este repositório documenta a arquitetura, os comandos e o processo completo para fins de portfólio.
 
-## 🏗️ Arquitetura
-
-![Arquitetura do projeto — 3 fases](Screenshots/arquitetura-devops-lab.png)
-
----
-
 ## 🎯 Sobre o Projeto
 
 Um site estático containerizado com Docker e deployado na AWS. O foco não é o site em si — é o **processo DevOps ao redor dele**: como empacotar, versionar, provisionar infraestrutura e automatizar deploys de forma progressiva.
+
+---
+
+## 🏗️ Arquitetura
+
+![Arquitetura do projeto — 3 fases](Screenshots/arquitetura-devops-lab.png)
 
 ---
 
@@ -47,31 +47,6 @@ devops-lab-docker-ec2/
 
 ---
 
-## 🏗️ Arquitetura
-
-```
-Developer (git push)
-        │
-        ▼
-GitHub Actions (CI/CD)
-        │
-        ├── docker build
-        ├── docker push ──────────► Amazon ECR (site_prod:latest)
-        │                                    │
-        └── SSH na EC2 ◄────────────────────┘
-                 │
-                 ▼
-          docker pull + run
-                 │
-                 ▼
-          Amazon EC2 (Amazon Linux 2023)
-          porta 80 → container nginx
-                 │
-                 ▼
-          Usuário acessa via IP público
-```
-
----
 
 ## 🚀 Fase 1 — Containerização com Docker e Deploy Manual
 
