@@ -4,6 +4,10 @@ Laboratório DevOps prático baseado no conteúdo da [Maria Lazara](https://www.
 
 > **Nota:** Os recursos AWS foram destruídos após cada fase para evitar custos. Este repositório documenta a arquitetura, os comandos e o processo completo para fins de portfólio.
 
+## 🏗️ Arquitetura
+
+![Arquitetura do projeto — 3 fases](Screenshots/arquitetura-devops-lab.png)
+
 ---
 
 ## 🎯 Sobre o Projeto
